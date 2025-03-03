@@ -1,0 +1,4 @@
+gcc '/home/gerry/Documents/Compiladores2025-2/prueba.o' -o '/home/gerry/Documents/Compiladores2025-2/prueba.exe'
+gerry@gerry-HP-EliteDesk-800-G5-Desktop-Mini:~/Documents/Compiladores2025-2$ gcc -E '/home/gerry/Documents/Compiladores2025-2/prueba.c' -o '/home/gerry/Documents/Compiladores2025-2/prueba.i'
+gerry@gerry-HP-EliteDesk-800-G5-Desktop-Mini:~/Documents/Compiladores2025-2$ gcc -S '/home/gerry/Documents/Compiladores2025-2/prueba.i' -o '/home/gerry/Documents/Compiladores2025-2/prueba.s'
+gerry@gerry-HP-EliteDesk-800-G5-Desktop-Mini:~/Documents/Compiladores2025-2$ gcc -c '/home/gerry/Documents/Compiladores2025-2/prueba.s' -o '/home/gerry/Documents/Compiladores2025-2/prueba.o'
