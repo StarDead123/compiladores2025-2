@@ -54,20 +54,26 @@ void liberar_arreglo(char **arreglo, int tamano)
 
     free(arreglo); // Liberar el arreglo de punteros
 }
-void escribir_tabla(char **tabla, int tamano, FILE *salida)
+void escribir_tabla(char **tabla, int tamano, FILE *salida, int sim)
 {
     int i;
-    for(i = 0; i < tamano; i++)
-        fprintf(salida,"%s\n",tabla[i]);
+    if(sim == 0)
+    {
+        for(i = 0; i < tamano; i++)
+            fprintf(salida,"%i %s %i\n",i,tabla[i],-1);
+    }
+
+    else
+    {
+        for(i = 0; i < tamano; i++)
+            fprintf(salida,"%i %s\n",i,tabla[i]);
+    }
 }
 int norepetido(char **tabla, int tamano, const char *var)
 {
     int i;
     for(i = 0; i < tamano; i++)
     {
-        printf("%s\n",var);
-        printf("%s\n",tabla[i]);
-
         if(strcmp(var, tabla[i])== 0)
             return 0;
     }
@@ -148,7 +154,6 @@ error (.)
 {pr} fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 0, busquedaLinealValor(yytext,pr,pr_len));
 {se} fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 1, busquedaLinealValor(yytext,se,se_len));
 {identificador} {
-            printf("VARIABLE\n");
             if(norepetido(tabla_simbolos,t_tabla_simbolos,yytext) == -1)
             {
                 agregar_cadena(&tabla_simbolos,&t_tabla_simbolos,yytext);
@@ -159,17 +164,14 @@ error (.)
 {oprel} fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 4, busquedaLinealValor(yytext,oprel,oprel_len));
 {opasi} fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 5, busquedaLinealValor(yytext,opasi,opasi_len));
 {cadena} {
-            printf("STRING\n");
             agregar_cadena(&tabla_literales_cadenas,&t_tabla_literales_cadenas,yytext);
             fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 6, t_tabla_literales_cadenas - 1);
         }
 {entero} {
-            printf("entero\n");
             agregar_cadena(&tabla_literales_enteros,&t_tabla_literales_enteros, yytext);
             fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 7, t_tabla_literales_enteros - 1);
         }
 {real} {
-            printf("real\n");
             agregar_cadena(&tabla_literales_reales,&t_tabla_literales_reales,yytext);
             fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 8, t_tabla_literales_reales - 1);
         }
@@ -192,24 +194,28 @@ int main(int argc, char **argv)
     int i;
     if(t_tabla_simbolos > 0)
     {
-        escribir_tabla(tabla_simbolos, t_tabla_simbolos, resultado_analisis_lexico);
+        fprintf(resultado_analisis_lexico,"\n\nPos.| Nombre | Tipo\n");
+        escribir_tabla(tabla_simbolos, t_tabla_simbolos, resultado_analisis_lexico, 0);
         liberar_arreglo(tabla_simbolos, t_tabla_simbolos);
     }
         
     if(t_tabla_literales_cadenas > 0)
     {
-        escribir_tabla(tabla_literales_cadenas, t_tabla_literales_cadenas, resultado_analisis_lexico);
+        fprintf(resultado_analisis_lexico,"\n\nPos.| Dato\n");
+        escribir_tabla(tabla_literales_cadenas, t_tabla_literales_cadenas, resultado_analisis_lexico, 1);
         liberar_arreglo(tabla_literales_cadenas, t_tabla_literales_cadenas);
     }
         
     if(t_tabla_literales_enteros > 0)
     {
-        escribir_tabla(tabla_literales_enteros, t_tabla_literales_enteros, resultado_analisis_lexico);
+        fprintf(resultado_analisis_lexico,"\n\nPos.| Dato\n");
+        escribir_tabla(tabla_literales_enteros, t_tabla_literales_enteros, resultado_analisis_lexico, 1);
         liberar_arreglo(tabla_literales_enteros, t_tabla_literales_enteros);
     }
     if(t_tabla_literales_reales > 0)
     {
-        escribir_tabla(tabla_literales_reales, t_tabla_literales_reales, resultado_analisis_lexico);
+        fprintf(resultado_analisis_lexico,"\n\nPos.| Dato\n");
+        escribir_tabla(tabla_literales_reales, t_tabla_literales_reales, resultado_analisis_lexico, 1);
         liberar_arreglo(tabla_literales_reales, t_tabla_literales_reales);
     }
     fclose(resultado_analisis_lexico);
