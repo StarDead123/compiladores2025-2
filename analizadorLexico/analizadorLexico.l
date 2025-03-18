@@ -2,17 +2,77 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#define TAMP 10 //tamaño máximo para recorrer los caracteres que componen a cada componente léxico
-FILE *resultado_analisis_lexico, *archivo_a_analizar;
-char pr[][TAMP] = {"Bool","Cade","Continuar","Devo","Ent",
+FILE *resultado_analisis_lexico;
+const char *pr[] = {"Bool","Cade","Continuar","Devo","Ent",
                    "Fals","Flota","Global","Haz","Mientras",
                    "Nulo","Para","Parar","Si","Sino","Ver"};
-char opari[][TAMP] = {"sum","rest","mult","div","mod","inc",
+const int pr_len = 16;
+const char *opari[] = {"sum","rest","mult","div","mod","inc",
                       "dec","exp","dive"};
-char opasi[][TAMP] = {"->","+->","-->","*->","/->","%->",
+const int opari_len = 9;
+const char *opasi[] = {"->","+->","-->","*->","/->","%->",
                       ">>","<<","^->","&->"};
-char se[][TAMP] = {"<",">","<<",">>#","#","#!","*","|","°"};
-char oprel[][TAMP] = {"h","m","e","c","he","me"};
+const int opasi_len = 10;
+const char *se[] = {"<",">","{{","}}","#","#!","*","|","°"};
+const int se_len = 9;
+const char *oprel[] = {"h","m","e","c","he","me"};
+const int oprel_len = 6;
+char **tabla_simbolos;
+int t_tabla_simbolos = 0;
+char **tabla_literales_enteros;
+int t_tabla_literales_enteros = 0;
+char **tabla_literales_reales;
+int t_tabla_literales_reales = 0;
+char **tabla_literales_cadenas;
+int t_tabla_literales_cadenas = 0;
+int busquedaLinealValor(const char *objetivo,const char **catalogo, const int lon_catalogo)
+{
+    int i;
+    for(i = 0; i < lon_catalogo;  i++)
+    {
+        if(strcmp(objetivo, *(catalogo + i)) == 0)
+            return i;
+    }
+    return -1;
+}
+void agregar_cadena(char ***tabla, int *tamano, const char *cadena) {
+    // Incrementar el tamaño del arreglo
+    (*tamano)++;
+
+    // Redimensionar el arreglo de punteros
+    *tabla = realloc(*tabla, (*tamano) * sizeof(char *));
+
+    // Reservar memoria para la nueva cadena y copiarla
+    (*tabla)[*tamano - 1] = malloc((strlen(cadena) + 1) * sizeof(char));
+    strcpy((*tabla)[*tamano - 1], cadena);
+}
+void liberar_arreglo(char **arreglo, int tamano) 
+{
+    int i;
+    for (int i = 0; i < tamano; i++) 
+        free(arreglo[i]); // Liberar cada cadena
+
+    free(arreglo); // Liberar el arreglo de punteros
+}
+void escribir_tabla(char **tabla, int tamano, FILE *salida)
+{
+    int i;
+    for(i = 0; i < tamano; i++)
+        fprintf(salida,"%s\n",tabla[i]);
+}
+int norepetido(char **tabla, int tamano, const char *var)
+{
+    int i;
+    for(i = 0; i < tamano; i++)
+    {
+        printf("%s\n",var);
+        printf("%s\n",tabla[i]);
+
+        if(strcmp(var, tabla[i])== 0)
+            return 0;
+    }
+    return -1;
+}
 %}
 espacio [ ]
 tab \t
@@ -26,7 +86,7 @@ dig [0-9]
 identificador @({letM}|{letm}|{leta}|{letA}|{dig})+_
 entero (\+|-)?({dig})+([gp])?
 real ({dig})+(('{dig}+)|[rR])
-cadena (--)(.)*(--)
+cadena --[^\-]*--
 comentario \[(.)*\]
 pr0 Bool
 pr1 Cade
@@ -68,8 +128,8 @@ opasi9 &->
 opasi ({opasi0}|{opasi1}|{opasi2}|{opasi3}|{opasi4}|{opasi5}|{opasi6}|{opasi7}|{opasi8}|{opasi9})
 se0 <
 se1 >
-se2 <<
-se3 >>#
+se2 \{\{
+se3 \}\}
 se4 #
 se5 #!
 se6 \*
@@ -85,27 +145,73 @@ oprel5 me
 oprel ({oprel0}|{oprel1}|{oprel2}|{oprel3}|{oprel4}|{oprel5})
 error (.)
 %%
-
-{identificador} printf("MENCIÓN ENCONTRADA: %s\n", yytext);
-{pr} printf("PR ENCONTRADA: %s\n", yytext);
-{opari} printf("OPARI ENCONTRADA: %s\n", yytext);
-{opasi} printf("OPASI ENCONTRADA: %s\n", yytext);
-{se} printf("SE ENCONTRADA: %s\n", yytext);
-{oprel} printf("oprel ENCONTRADA: %s\n", yytext);
-{real} printf("real ENCONTRADA: %s\n", yytext);
-{entero} printf("entero ENCONTRADA: %s\n", yytext);
-{cadena} printf("cadena ENCONTRADA: %s\n", yytext);
-{comentario} printf("comentario ENCONTRADA: %s\n", yytext);
-{delimitador} printf("DELIMITADOR ENCONTRADA: %s\n", yytext);
-{error} printf("ERROR ENCONTRADA: %s\n", yytext);
-
+{pr} fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 0, busquedaLinealValor(yytext,pr,pr_len));
+{se} fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 1, busquedaLinealValor(yytext,se,se_len));
+{identificador} {
+            printf("VARIABLE\n");
+            if(norepetido(tabla_simbolos,t_tabla_simbolos,yytext) == -1)
+            {
+                agregar_cadena(&tabla_simbolos,&t_tabla_simbolos,yytext);
+                fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 2, t_tabla_simbolos - 1);
+            }
+}
+{opari} fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 3, busquedaLinealValor(yytext,opari,opari_len));
+{oprel} fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 4, busquedaLinealValor(yytext,oprel,oprel_len));
+{opasi} fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 5, busquedaLinealValor(yytext,opasi,opasi_len));
+{cadena} {
+            printf("STRING\n");
+            agregar_cadena(&tabla_literales_cadenas,&t_tabla_literales_cadenas,yytext);
+            fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 6, t_tabla_literales_cadenas - 1);
+        }
+{entero} {
+            printf("entero\n");
+            agregar_cadena(&tabla_literales_enteros,&t_tabla_literales_enteros, yytext);
+            fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 7, t_tabla_literales_enteros - 1);
+        }
+{real} {
+            printf("real\n");
+            agregar_cadena(&tabla_literales_reales,&t_tabla_literales_reales,yytext);
+            fprintf(resultado_analisis_lexico,"%s (%i,%i)\n",yytext, 8, t_tabla_literales_reales - 1);
+        }
 %%
-
 int main(int argc, char **argv) 
 {
-    printf("%i\n",strcmp(opasi[5], "%->"));
-    if(argc > 1)
-        printf("%s\n",*(argv+1));
+    if(argc < 2)
+    {
+        printf("DEBE ESPECIFICAR NOMBRE DEL ARCHIVO QUE SERÁ ANALIZADO\n");
+        return -1;
+    }
+    yyin = fopen(argv[1],"r");
+    if(yyin == NULL)
+    {
+        printf("ESPECIFIQUE UN ARCHIVO VÁLIDO PARA ANALIZAR\n");
+        return -1;
+    }
+    resultado_analisis_lexico = fopen("salida.txt","w");
     yylex();
+    int i;
+    if(t_tabla_simbolos > 0)
+    {
+        escribir_tabla(tabla_simbolos, t_tabla_simbolos, resultado_analisis_lexico);
+        liberar_arreglo(tabla_simbolos, t_tabla_simbolos);
+    }
+        
+    if(t_tabla_literales_cadenas > 0)
+    {
+        escribir_tabla(tabla_literales_cadenas, t_tabla_literales_cadenas, resultado_analisis_lexico);
+        liberar_arreglo(tabla_literales_cadenas, t_tabla_literales_cadenas);
+    }
+        
+    if(t_tabla_literales_enteros > 0)
+    {
+        escribir_tabla(tabla_literales_enteros, t_tabla_literales_enteros, resultado_analisis_lexico);
+        liberar_arreglo(tabla_literales_enteros, t_tabla_literales_enteros);
+    }
+    if(t_tabla_literales_reales > 0)
+    {
+        escribir_tabla(tabla_literales_reales, t_tabla_literales_reales, resultado_analisis_lexico);
+        liberar_arreglo(tabla_literales_reales, t_tabla_literales_reales);
+    }
+    fclose(resultado_analisis_lexico);
     return 0;
 }
